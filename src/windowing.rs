@@ -45,18 +45,18 @@ impl Window {
     let event_loop = self.event_loop;
 
     event_loop.run(move |event, elwt| match event {
-        Event::WindowEvent { event, .. } => match event {
-          WindowEvent::CloseRequested => {
-            event_dispatcher.dispatch(events::Event::Quit);
-            elwt.exit();
-          },
-          WindowEvent::RedrawRequested => {
-            event_dispatcher.dispatch(events::Event::Draw);
-          },
-          _ => {},
+      Event::WindowEvent { event, .. } => match event {
+        WindowEvent::CloseRequested => {
+          event_dispatcher.dispatch(events::Event::Quit);
+          elwt.exit();
         },
-        Event::AboutToWait => win.request_redraw(),
-        _ => {}
+        WindowEvent::RedrawRequested => {
+          event_dispatcher.dispatch(events::Event::Draw);
+        },
+        _ => {},
+      },
+      Event::AboutToWait => win.request_redraw(),
+      _ => {}
     }).unwrap();
   }
 }
