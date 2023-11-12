@@ -3,13 +3,11 @@
 use grafik::prelude::*;
 // ===================
 
-fn main() {
-  let window = Window::new(WindowConfig::default());
-  let mut event_dispatcher = EventDispatcher::new();
-
-  event_dispatcher.subscribe(Event::Quit, on_quit);
-
-  window.run(event_dispatcher);
+#[tokio::main]
+async fn main() {
+  let mut app = Grafik::new(Default::default()).await;
+  app.subscribe_to(Event::Quit, on_quit);
+  app.run();
 }
 
 fn on_quit() {

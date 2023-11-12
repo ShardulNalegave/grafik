@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 // ===================
 
-type EventHandler = fn();
+pub(crate) type EventHandler = fn();
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Event {
@@ -11,12 +11,12 @@ pub enum Event {
   Quit,
 }
 
-pub struct EventDispatcher {
+pub(crate) struct EventDispatcher {
   subs: HashMap<Event, Vec<EventHandler>>,
 }
 
 impl EventDispatcher {
-  pub fn new() -> Self {
+  pub(crate) fn new() -> Self {
     let mut subs = HashMap::new();
     subs.insert(Event::Draw, vec![]);
     subs.insert(Event::Quit, vec![]);
@@ -24,11 +24,11 @@ impl EventDispatcher {
     Self { subs }
   }
 
-  pub fn subscribe(&mut self, event: Event, handler: EventHandler) {
+  pub(crate) fn subscribe(&mut self, event: Event, handler: EventHandler) {
     self.subs.get_mut(&event).unwrap().push(handler);
   }
 
-  pub fn dispatch(&self, event: Event) {
+  pub(crate) fn dispatch(&self, event: Event) {
     for handler in self.subs.get(&event).unwrap() {
       (*handler)();
     }
