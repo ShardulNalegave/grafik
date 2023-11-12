@@ -69,6 +69,7 @@ impl Grafik {
         Event::MainEventsCleared => win.request_redraw(),
         Event::RedrawRequested(_) => {
           event_dispatcher.dispatch(events::Event::Draw);
+          renderer_state.render();
         },
         _ => {}
       }
