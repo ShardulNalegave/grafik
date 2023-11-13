@@ -3,6 +3,13 @@
 use winit::window::Window;
 // ===================
 
+#[derive(Debug, Clone, Copy)]
+pub enum RendererError {
+  CouldntCreateSurface,
+  CouldntGetAdapter,
+  CouldntGetDevice,
+}
+
 pub(crate) struct RendererState {
   surface: wgpu::Surface,
   device: wgpu::Device,
@@ -11,24 +18,31 @@ pub(crate) struct RendererState {
 }
 
 impl RendererState {
-  pub(crate) async fn new(win: &Window) -> Self {
+  pub(crate) async fn new(win: &Window) -> Result<Self, RendererError> {
     let size = win.inner_size();
 
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
       backends: wgpu::Backends::all(),
-      dx12_shader_compiler: Default::default(),
-      flags: Default::default(),
-      gles_minor_version: Default::default(),
+      ..Default::default()
     });
-    let surface = unsafe { instance.create_surface(&win) }.unwrap();
 
-    let adapter = instance.request_adapter(
-      &wgpu::RequestAdapterOptions {
-        power_preference: wgpu::PowerPreference::default(),
-        compatible_surface: Some(&surface),
-        force_fallback_adapter: false,
-      },
-    ).await.unwrap();
+    let surface = unsafe { instance.create_surface(&win) }
+      .map_err(|_| RendererError::CouldntCreateSurface)?;
+
+    let adapter = {
+      let res = instance.request_adapter(
+        &wgpu::RequestAdapterOptions {
+          power_preference: wgpu::PowerPreference::default(),
+          compatible_surface: Some(&surface),
+          force_fallback_adapter: false,
+        },
+      ).await;
+      
+      match res {
+        Some(adapter) => adapter,
+        None => return Err(RendererError::CouldntGetAdapter),
+      }
+    };
 
     let (device, queue) = adapter.request_device(
       &wgpu::DeviceDescriptor {
@@ -37,7 +51,7 @@ impl RendererState {
         label: None,
       },
       None,
-    ).await.unwrap();
+    ).await.map_err(|_| RendererError::CouldntGetDevice)?;
 
     let surface_caps = surface.get_capabilities(&adapter);
     let surface_format = surface_caps.formats.iter()
@@ -55,12 +69,12 @@ impl RendererState {
     };
     surface.configure(&device, &config);
 
-    Self {
+    Ok(Self {
       surface,
       surface_cfg: config,
       device,
       queue,
-    }
+    })
   }
 
   pub(crate) fn resize(&mut self, new_size: (u32, u32)) {
