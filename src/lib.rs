@@ -12,7 +12,6 @@ pub mod windowing;
 pub mod renderer;
 
 // ===== Imports =====
-use events::EventDispatcher;
 use renderer::RendererState;
 use windowing::WindowConfig;
 use winit::{
@@ -29,6 +28,7 @@ use winit::{
 #[derive(Debug, Clone, Copy)]
 pub enum GrafikError {
   CouldntCreateRenderer,
+  CouldntBuildWindow,
 }
 
 /// # Grafik
@@ -39,10 +39,12 @@ pub struct Grafik {
   event_loop: EventLoop<()>,
   /// The Window Instance
   window: Window,
-  /// Event-Dispatcher for the Application
-  event_dispatcher: EventDispatcher,
   /// Renderer State
   renderer_state: RendererState,
+  /// On Quit event handler
+  on_quit: Option<events::QuitHandler>,
+  /// On Draw event handler
+  on_draw: Option<events::DrawHandler>,
 }
 
 impl Grafik {
@@ -59,7 +61,7 @@ impl Grafik {
       .with_inner_size(PhysicalSize::new(window_cfg.size.0, window_cfg.size.1))
       .with_resizable(window_cfg.resizable)
       .build(&event_loop)
-      .unwrap();
+      .map_err(|_| GrafikError::CouldntBuildWindow)?;
 
     let renderer_state = RendererState::new(&window)
       .await.map_err(|_| GrafikError::CouldntCreateRenderer)?;
@@ -67,8 +69,9 @@ impl Grafik {
     Ok(Self {
       event_loop,
       window,
-      event_dispatcher: EventDispatcher::new(),
       renderer_state,
+      on_quit: None,
+      on_draw: None,
     })
   }
 
@@ -77,14 +80,15 @@ impl Grafik {
   pub fn run(self) {
     let window = self.window;
     let event_loop = self.event_loop;
-    let event_dispatcher = self.event_dispatcher;
     let mut renderer_state = self.renderer_state;
+    let on_quit = self.on_quit.unwrap_or(|| {});
+    let on_draw = self.on_draw.unwrap_or(|| {});
 
     event_loop.run(move |event, _, control_flow| {
       match event {
         Event::WindowEvent { event, .. } => match event {
           WindowEvent::CloseRequested => {
-            event_dispatcher.dispatch(events::Event::Quit);
+            on_quit();
             control_flow.set_exit();
           },
           WindowEvent::Resized(physical_size) => {
@@ -97,7 +101,7 @@ impl Grafik {
         },
         Event::MainEventsCleared => window.request_redraw(),
         Event::RedrawRequested(_) => {
-          event_dispatcher.dispatch(events::Event::Draw);
+          on_draw();
           renderer_state.render();
         },
         _ => {}
@@ -105,13 +109,15 @@ impl Grafik {
     });
   }
 
-  /// # Subscribe To
-  /// Subscribes to the specified event with provided handler.
-  /// 
-  /// ### Arguments
-  /// * event => Event to subscribe
-  /// * handler => Event handler
-  pub fn subscribe_to(&mut self, event: events::Event, handler: events::EventHandler) {
-    self.event_dispatcher.subscribe(event, handler);
+  /// # Set On-Quit
+  /// Set on quit event handler.
+  pub fn set_on_quit(&mut self, handler: events::QuitHandler) {
+    self.on_quit = Some(handler);
+  }
+
+  /// # Set On-Draw
+  /// Set on draw event handler.
+  pub fn set_on_draw(&mut self, hahndler: events::DrawHandler) {
+    self.on_draw = Some(hahndler);
   }
 }

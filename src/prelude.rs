@@ -1,6 +1,6 @@
 
 pub use crate::{
   Grafik,
-  events::Event,
+  events::*,
   windowing::WindowConfig,
 };

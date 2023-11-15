@@ -1,7 +1,12 @@
 
+/// # Window Config
+/// Config options for application window
 pub struct WindowConfig {
+  /// Window title
   pub title: String,
+  /// Window size
   pub size: (u32, u32),
+  /// Is the window resizable?
   pub resizable: bool,
 }
 

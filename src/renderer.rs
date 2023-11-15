@@ -3,13 +3,21 @@
 use winit::window::Window;
 // ===================
 
+/// # Renderer-Error
+/// Errors that can happen when using the Renderer (i.e. RendererState)
 #[derive(Debug, Clone, Copy)]
 pub enum RendererError {
+  // Thrown when not able to create `wgpu::Surface`
   CouldntCreateSurface,
+  // Thrown when not able to acquire `wgpu::Adapter`
   CouldntGetAdapter,
+  // Thrown when not able to acquire `wgpu::Device`
   CouldntGetDevice,
 }
 
+/// # Renderer State
+/// Renderer-State or simply the Renderer is responsible for drawing to the screen.
+/// It is basically and abstraction over wgpu structs to make things simpler.
 pub(crate) struct RendererState {
   surface: wgpu::Surface,
   device: wgpu::Device,
@@ -18,17 +26,26 @@ pub(crate) struct RendererState {
 }
 
 impl RendererState {
+  /// # Constructor
+  /// Constructs a new RendererState
+  /// 
+  /// ### Arguments
+  /// * win => Target window
   pub(crate) async fn new(win: &Window) -> Result<Self, RendererError> {
+    // Get target window size
     let size = win.inner_size();
 
+    // Create `wgpu::Instance`. It doesn't need to be stored, can be disposed after use.
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
       backends: wgpu::Backends::all(),
       ..Default::default()
     });
 
+    // Create a surface
     let surface = unsafe { instance.create_surface(&win) }
       .map_err(|_| RendererError::CouldntCreateSurface)?;
 
+    // Get the adapter
     let adapter = {
       let res = instance.request_adapter(
         &wgpu::RequestAdapterOptions {
@@ -44,6 +61,7 @@ impl RendererState {
       }
     };
 
+    // Get device and queue
     let (device, queue) = adapter.request_device(
       &wgpu::DeviceDescriptor {
         features: wgpu::Features::empty(),
@@ -53,6 +71,7 @@ impl RendererState {
       None,
     ).await.map_err(|_| RendererError::CouldntGetDevice)?;
 
+    // Create a SurfaceConfiguration and configure our created surface
     let surface_caps = surface.get_capabilities(&adapter);
     let surface_format = surface_caps.formats.iter()
       .copied()
@@ -77,6 +96,8 @@ impl RendererState {
     })
   }
 
+  /// # Resize
+  /// Resizes the wgpu surface
   pub(crate) fn resize(&mut self, new_size: (u32, u32)) {
     if new_size.0 > 0 && new_size.1 > 0 {
       self.surface_cfg.width = new_size.0;
@@ -85,6 +106,8 @@ impl RendererState {
     }
   }
 
+  /// # Render
+  /// Draws to the screen/window
   pub(crate) fn render(&mut self) {
     let output = self.surface.get_current_texture().unwrap();
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
