@@ -11,8 +11,14 @@ pub mod windowing;
 /// Renderer Module
 pub mod renderer;
 
+/// Utils module
+pub mod utils;
+
 // ===== Imports =====
-use renderer::RendererState;
+use renderer::{
+  RendererState,
+  context::Context,
+};
 use windowing::WindowConfig;
 use winit::{
   event_loop::EventLoop,
@@ -81,8 +87,11 @@ impl Grafik {
     let window = self.window;
     let event_loop = self.event_loop;
     let mut renderer_state = self.renderer_state;
+    
     let on_quit = self.on_quit.unwrap_or(|| {});
-    let on_draw = self.on_draw.unwrap_or(|| {});
+    let on_draw = self.on_draw.unwrap_or(|_| {});
+    
+    let mut context = Context::default();
 
     event_loop.run(move |event, _, control_flow| {
       match event {
@@ -101,8 +110,8 @@ impl Grafik {
         },
         Event::MainEventsCleared => window.request_redraw(),
         Event::RedrawRequested(_) => {
-          on_draw();
-          renderer_state.render();
+          on_draw(&mut context);
+          renderer_state.render(&context);
         },
         _ => {}
       }

@@ -1,6 +1,11 @@
 
+/// Render-Context module
+pub mod context;
+
 // ===== Imports =====
 use winit::window::Window;
+
+use crate::renderer::context::Context;
 // ===================
 
 /// # Renderer-Error
@@ -108,37 +113,13 @@ impl RendererState {
 
   /// # Render
   /// Draws to the screen/window
-  pub(crate) fn render(&mut self) {
+  pub(crate) fn render(&mut self, ctx: &Context) {
     let output = self.surface.get_current_texture().unwrap();
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
-    let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-      label: Some("Render Encoder"),
-    });
+    
+    let buffer = ctx.build_encoder(view, &self.device);
+    self.queue.submit(std::iter::once(buffer));
 
-    {
-      let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        label: Some("Render Pass"),
-        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-          view: &view,
-          resolve_target: None,
-            ops: wgpu::Operations {
-              load: wgpu::LoadOp::Clear(wgpu::Color {
-                r: 0.1,
-                g: 0.2,
-                b: 0.3,
-                a: 1.0,
-              }),
-              store: wgpu::StoreOp::Store,
-          },
-        })],
-        depth_stencil_attachment: None,
-        timestamp_writes: Default::default(),
-        occlusion_query_set: Default::default(),
-      });
-    }
-
-    // submit will accept anything that implements IntoIter
-    self.queue.submit(std::iter::once(encoder.finish()));
     output.present();
   }
 }
